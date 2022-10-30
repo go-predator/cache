@@ -3,7 +3,7 @@
  * @Email:     thepoy@163.com
  * @File Name: sqlite.go
  * @Created:   2021-11-24 19:44:36
- * @Modified:  2021-11-24 20:15:58
+ * @Modified:  2022-10-30 20:03:01
  */
 
 package cache
@@ -11,20 +11,12 @@ package cache
 import (
 	"errors"
 
+	"github.com/go-predator/predator"
 	"github.com/go-predator/tools"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
-
-type CacheModel struct {
-	Key   string `gorm:"primaryKey"`
-	Value []byte
-}
-
-func (CacheModel) TableName() string {
-	return "cache"
-}
 
 type SQLiteCache struct {
 	URI        string
@@ -46,7 +38,7 @@ func (sc *SQLiteCache) Init() error {
 	}
 	sc.db = db
 
-	err = sc.db.AutoMigrate(&CacheModel{})
+	err = sc.db.AutoMigrate(&predator.CacheModel{})
 	if err != nil {
 		return err
 	}
@@ -54,7 +46,7 @@ func (sc *SQLiteCache) Init() error {
 }
 
 func (sc *SQLiteCache) IsCached(key string) ([]byte, bool) {
-	var cache CacheModel
+	var cache predator.CacheModel
 	err := sc.db.Where("`key` = ?", key).First(&cache).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -78,7 +70,7 @@ func (sc *SQLiteCache) IsCached(key string) ([]byte, bool) {
 
 func (sc *SQLiteCache) Cache(key string, val []byte) error {
 	var count int
-	err := sc.db.Model(&CacheModel{}).Select("COUNT(*)").Where("`key` = ?", key).Scan(&count).Error
+	err := sc.db.Model(&predator.CacheModel{}).Select("COUNT(*)").Where("`key` = ?", key).Scan(&count).Error
 	if err != nil {
 		return err
 	}
@@ -87,7 +79,7 @@ func (sc *SQLiteCache) Cache(key string, val []byte) error {
 		if sc.compressed {
 			val = tools.Compress(val)
 		}
-		return sc.db.Create(&CacheModel{
+		return sc.db.Create(&predator.CacheModel{
 			Key:   key,
 			Value: val,
 		}).Error
@@ -97,7 +89,7 @@ func (sc *SQLiteCache) Cache(key string, val []byte) error {
 }
 
 func (sc *SQLiteCache) Clear() error {
-	return sc.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&CacheModel{}).Error
+	return sc.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&predator.CacheModel{}).Error
 }
 
 func (sc *SQLiteCache) Compressed(yes bool) {
